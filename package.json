@@ -4,15 +4,15 @@
   "description": "Parps when it notices wroth happenings.",
   "main": "app.js",
   "dependencies": {
+    "async-waterfall": "^0.1.5",
     "cheerio": "^0.19.0",
     "cradle": "^0.6.9",
-    "fs": "0.0.2",
     "request": "^2.54.0"
   },
   "devDependencies": {
     "mocha": "^2.2.1",
     "should": "^5.2.0"
-    },
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

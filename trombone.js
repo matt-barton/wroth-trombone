@@ -1,6 +1,6 @@
-"use strict";
+"use strict"
 
-var waterfall = require('async-waterfall');
+var waterfall = require('async-waterfall')
 
 module.exports = function(fs, rq) {
 
@@ -11,24 +11,32 @@ module.exports = function(fs, rq) {
 			function(next) {
 				fs.readFile('scumfilter.js', 'utf8', function(e) {
 					if (e) {
-						if (typeof callback == 'function') return callback(e);
+						if (e.code == 'ENOENT') {
+
+						}
+						else {
+							if (typeof callback == 'function') return callback(e)
+						}
 					}
-					next();
-				});
+					next()
+				})
 			},
 
 			function(next) {
 				rq('http://www.wrathofthebarclay.co.uk/interactive/board/board.php', function() {
-					next();
-				});
+					next()
+				})
 			}
 		], function() {
-			if (typeof callback == 'function') callback();
-		});
+			if (typeof callback == 'function') callback(null)
+		})
 
 	}
 
+	function parp() {}
+
 	return {
-		observe: observe
-	};
+		observe: observe,
+		parp: parp
+	}
 }

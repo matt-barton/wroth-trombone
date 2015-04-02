@@ -102,6 +102,7 @@ describe('trombone', function() {
 				callback(null, 'var scum = \'["test"]\'.evalJSON')
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
+			trombone.overrideParp(function() {})
 			trombone.observe(function(e) {
 				(e === null).should.equal(true)
 				done()
@@ -290,8 +291,9 @@ describe('trombone', function() {
 					callback(null, scumFilter)
 				},
 				writeFile: function(filename, data, callback) {
-					data.should.equal(JSON.strigify(webScumfilter))
-					writeFile = true;
+					filename.should.equal('scumfilter.js')
+					data.should.equal(JSON.stringify(webScumfilter))
+					writeFileCalled = true;
 					callback()
 				}
 			}
@@ -299,10 +301,10 @@ describe('trombone', function() {
 				callback(null, 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON')
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
-			trombone.parp = function(message) {
+			trombone.overrideParp(function(message) {
 				message.should.equal("ENTRY_THREE added to Scum Filter.")
 				parpCalled = true;
-			}
+			})
 			trombone.observe(function() {
 				parpCalled.should.equal(true);
 				writeFileCalled.should.equal(true);
@@ -311,8 +313,39 @@ describe('trombone', function() {
 		});
 
 
-		// web has > one entry in scum filter, fs has all but one matching entries
-		// web has > one entry in scum filter, fs has > zero entries, > one of which don't match
+		it ('Given more than one scum filter entry is found on the wroth ' + 
+			'And many not matching entries are found on the file system ' +
+			'Then the trombone is asked to parp for each new entry' +
+			'And the scum filter on the filesystem is updated', function(done){
+			var writeFileCalled = false
+			var parpCalled = 0
+			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]')
+			var mockFs = {
+				readFile: function(filename, encoding, callback) {
+					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
+					callback(null, scumFilter)
+				},
+				writeFile: function(filename, data, callback) {
+					filename.should.equal('scumfilter.js')
+					data.should.equal(JSON.stringify(webScumfilter))
+					writeFileCalled = true
+					callback()
+				}
+			}
+			var mockRequest = function(url, callback) {
+				callback(null, 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]\'.evalJSON')
+			}
+			var trombone = new tromboneModule(mockFs, mockRequest)
+			trombone.overrideParp(function() {
+				parpCalled ++
+			})
+			trombone.observe(function() {
+				parpCalled.should.equal(2);
+				writeFileCalled.should.equal(true);
+				done()
+			})
+		});
+
 		// web has > one entry in scum filter, fs has all matching entries, plus one extra
 		// web has > one entry in scum filter, fs has all matching entries, plus > one extra
 

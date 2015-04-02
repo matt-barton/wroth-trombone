@@ -52,48 +52,47 @@ module.exports = function(fs, rq) {
 			},
 
 			function(fsScumFilter, webScumFilter, next) {
-				waterfall(webScumFilter.map(
-					function(webFilterEntry){ 
-						return function (lastResult, webCallback) {
-							if (typeof lastResult == 'function') webCallback = lastResult
-							if (typeof lastResult != 'array') lastResult = []
-							waterfall(fsScumFilter.map(
-								function(fsFilterEntry) {
-									return function (last, fsCallback) {
-										if (typeof last == 'function') fsCallback = last
-										if (last === true) return fsCallback(null, true)
-										if (webFilterEntry == fsFilterEntry) return fsCallback(null, true)
-										fsCallback(null, false);
-									}
-								}),
-								function(e, found) {
-									if (!found) {
-										lastResult.push(webFilterEntry);
-									}
-									webCallback(null, lastResult)
-								} 
-							)
-						}
-					}),
-					function(e, newEntries) {
-						next(null, newEntries)
+
+				var newEntries = []
+				for (var x=0; x<webScumFilter.length; x++) {
+					var webEntry = webScumFilter[x]
+					var found = false
+					for (var y=0; y<fsScumFilter.length; y++) {
+						if (fsScumFilter[y] == webEntry) found = true
 					}
-				)
+					if (!found) {
+						newEntries.push(webEntry)
+					}
+				}
+
+				next(null, newEntries, webScumFilter)
 			},
 
-			function(newScumFilterEntries, next) {
+			function(newScumFilterEntries, allScumFilterEntries, next) {
 				waterfall(newScumFilterEntries.map(
 					function(entry) {
 						return function(last, nextCallback) {
 							if (typeof last == 'function') nextCallback = last;
+							parp(entry + ' added to Scum Filter.')
 							nextCallback()
 						}
 					}
 					
 				),
 				function (e) {
-					next(null)
+					next(null, newScumFilterEntries.length > 0 ? allScumFilterEntries : false)
 				})
+			},
+
+			function(allScumFilterEntries, next) {
+				if (allScumFilterEntries !== false) {
+					fs.writeFile('scumfilter.js', JSON.stringify(allScumFilterEntries), function() {
+						next()
+					})
+				}
+				else {
+					next()
+				}
 			}
 
 		], function(e) {
@@ -105,8 +104,13 @@ module.exports = function(fs, rq) {
 
 	function parp() {}
 
+	function overrideParp(fn) {
+		parp = fn
+	}
+
 	return {
 		observe: observe,
-		parp: parp
+		parp: parp,
+		overrideParp: overrideParp
 	}
 }

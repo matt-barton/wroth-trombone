@@ -32,10 +32,10 @@ module.exports = function(fs, rq) {
 					function fail() {
 						callback(new Error('No scum filter entries could be found.'))
 					}
-					var regex = /^.*var scum = '(\[.+\])'\.evalJSON.*$/
+					var regex = /.*var scum = '(\[[^\]]+\]).*/
 					var scum = []
 					try {
-						var matches = regex.exec(html);
+						var matches = regex.exec(html.body);
 						if (matches == null) return fail()
 						scum = JSON.parse(matches[1]);
 						if (scum.length == 0) {
@@ -54,21 +54,28 @@ module.exports = function(fs, rq) {
 			function(fsScumFilter, webScumFilter, next) {
 
 				var newEntries = []
+				var removedEntries = []
 				for (var x=0; x<webScumFilter.length; x++) {
 					var webEntry = webScumFilter[x]
 					var found = false
 					for (var y=0; y<fsScumFilter.length; y++) {
 						if (fsScumFilter[y] == webEntry) found = true
 					}
-					if (!found) {
-						newEntries.push(webEntry)
-					}
+					if (!found) newEntries.push(webEntry)
 				}
 
-				next(null, newEntries, webScumFilter)
+				for (var x=0; x<fsScumFilter.length; x++) {
+					var fsEntry = fsScumFilter[x]
+					var found = false
+					for (var y=0; y<webScumFilter.length; y++) {
+						if (webScumFilter[y] == fsEntry) found = true
+					}
+					if (!found) removedEntries.push(fsEntry)
+				}
+				next(null, newEntries, removedEntries, webScumFilter)
 			},
 
-			function(newScumFilterEntries, allScumFilterEntries, next) {
+			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
 				waterfall(newScumFilterEntries.map(
 					function(entry) {
 						return function(last, nextCallback) {
@@ -76,11 +83,26 @@ module.exports = function(fs, rq) {
 							parp(entry + ' added to Scum Filter.')
 							nextCallback()
 						}
-					}
-					
+					}					
 				),
 				function (e) {
-					next(null, newScumFilterEntries.length > 0 ? allScumFilterEntries : false)
+					next(null, newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries)
+				})
+			},
+
+			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
+				waterfall(removedScumFilterEntries.map(
+					function(entry) {
+						return function(last, nextCallback) {
+							if (typeof last == 'function') nextCallback = last;
+							parp(entry + ' removed from Scum Filter.')
+							nextCallback()
+						}
+					}
+				),
+				function (e) {
+					var writeScumFilter = newScumFilterEntries.length > 0 || removedScumFilterEntries.length > 0
+					next(null, writeScumFilter ? allScumFilterEntries : false)
 				})
 			},
 
@@ -102,7 +124,8 @@ module.exports = function(fs, rq) {
 
 	}
 
-	function parp() {}
+	function parp(message) {
+	}
 
 	function overrideParp(fn) {
 		parp = fn

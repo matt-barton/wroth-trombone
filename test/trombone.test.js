@@ -12,7 +12,7 @@ describe('trombone', function() {
 	}
 
 	var mockRequest = function(url, callback) {
-		callback()
+		callback(null, {body: ''})
 	}
 
 	describe('observe', function() {
@@ -75,7 +75,7 @@ describe('trombone', function() {
 			}
 			var mockRequest = function(url, callback) {
 				(true).should.equal(false)
-				callback()
+				callback(null, {body: ''})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.observe(function() {
@@ -99,7 +99,9 @@ describe('trombone', function() {
 				}
 			}
 			var mockRequest = function(url, callback) {
-				callback(null, 'var scum = \'["test"]\'.evalJSON')
+				callback(null, {
+					body: 'var scum = \'["test"]\'.evalJSON'
+				})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.overrideParp(function() {})
@@ -187,7 +189,7 @@ describe('trombone', function() {
 			'Then the wroth index page is requested from the web', function(done) {
 			var mockRequest = function(url, callback) {
 				url.should.equal('http://www.wrathofthebarclay.co.uk/interactive/board/board.php')
-				callback()
+				callback(null, {body: ''})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.observe(function() {
@@ -214,7 +216,7 @@ describe('trombone', function() {
 			'When the wroth index page is requested from the web ' +
 			'Then an error is returned to the caller', function(done){
 			var mockRequest = function(url, callback) {
-				callback(null, '')
+				callback(null, {body: ''})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.observe(function(e) {
@@ -241,7 +243,9 @@ describe('trombone', function() {
 				}
 			}
 			var mockRequest = function(url, callback) {
-				callback(null, 'var scum = \'["ENTRY_ONE"]\'.evalJSON')
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
+				})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.parp = function() {
@@ -267,7 +271,9 @@ describe('trombone', function() {
 				}
 			}
 			var mockRequest = function(url, callback) {
-				callback(null, 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON')
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON'
+				})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.parp = function() {
@@ -298,7 +304,9 @@ describe('trombone', function() {
 				}
 			}
 			var mockRequest = function(url, callback) {
-				callback(null, 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON')
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON'
+				})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.overrideParp(function(message) {
@@ -333,7 +341,9 @@ describe('trombone', function() {
 				}
 			}
 			var mockRequest = function(url, callback) {
-				callback(null, 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]\'.evalJSON')
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]\'.evalJSON'
+				})
 			}
 			var trombone = new tromboneModule(mockFs, mockRequest)
 			trombone.overrideParp(function() {
@@ -347,7 +357,79 @@ describe('trombone', function() {
 		});
 
 		// web has > one entry in scum filter, fs has all matching entries, plus one extra
+		it ('Given more than one scum filter entry is found on the wroth ' + 
+			'And all matching entries are found on the file system ' +
+			'And one extra entry is found on the file system ' +
+			'Then the trombone is asked to parp for the extra entry' +
+			'And the scum filter on the filesystem is updated', function(done){
+			var writeFileCalled = false
+			var parpCalled = false
+			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
+			var mockFs = {
+				readFile: function(filename, encoding, callback) {
+					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE"])
+					callback(null, scumFilter)
+				},
+				writeFile: function(filename, data, callback) {
+					filename.should.equal('scumfilter.js')
+					data.should.equal(JSON.stringify(webScumfilter))
+					writeFileCalled = true
+					callback()
+				}
+			}
+			var mockRequest = function(url, callback) {
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO"]\'.evalJSON'
+				})
+			}
+			var trombone = new tromboneModule(mockFs, mockRequest)
+			trombone.overrideParp(function(message) {
+				message.should.equal("ENTRY_THREE removed from Scum Filter.")
+				parpCalled = true
+			})
+			trombone.observe(function() {
+				parpCalled.should.be.true
+				writeFileCalled.should.be.true
+				done()
+			})
+		});
+
 		// web has > one entry in scum filter, fs has all matching entries, plus > one extra
+		it ('Given more than one scum filter entry is found on the wroth ' + 
+			'And all matching entries are found on the file system ' +
+			'And more than one extra entries are found on the file system ' +
+			'Then the trombone is asked to parp for each extra entry' +
+			'And the scum filter on the filesystem is updated', function(done){
+			var writeFileCalled = false
+			var parpCalled = 0
+			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
+			var mockFs = {
+				readFile: function(filename, encoding, callback) {
+					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"])
+					callback(null, scumFilter)
+				},
+				writeFile: function(filename, data, callback) {
+					filename.should.equal('scumfilter.js')
+					data.should.equal(JSON.stringify(webScumfilter))
+					writeFileCalled = true
+					callback()
+				}
+			}
+			var mockRequest = function(url, callback) {
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO"]\'.evalJSON'
+				})
+			}
+			var trombone = new tromboneModule(mockFs, mockRequest)
+			trombone.overrideParp(function(message) {
+				parpCalled++
+			})
+			trombone.observe(function() {
+				parpCalled.should.equal(2)
+				writeFileCalled.should.be.true
+				done()
+			})
+		});
 
 	})
 

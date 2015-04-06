@@ -2,8 +2,9 @@
 
 var waterfall = require('async-waterfall')
 
-module.exports = function(fs, rq) {
+module.exports = function(fs, rq, testMethods) {
 
+	// PUBLIC METHODS
 	function observe(callback) {
 
 		waterfall([
@@ -28,16 +29,19 @@ module.exports = function(fs, rq) {
 
 			function(fsScumFilter, next) {
 				rq('http://www.wrathofthebarclay.co.uk/interactive/board/board.php', function(e, html) {
-					if (e) if (typeof callback == 'function') return callback(e)
+					if (e) return webError(e, callback)
+					previousErrorLogged(function(e, data) {
+						if (!e) email('Wroth service is resumed')	
+					})
 					function fail() {
 						callback(new Error('No scum filter entries could be found.'))
 					}
 					var regex = /.*var scum = '(\[[^\]]+\]).*/
 					var scum = []
 					try {
-						var matches = regex.exec(html.body);
+						var matches = regex.exec(html.body)
 						if (matches == null) return fail()
-						scum = JSON.parse(matches[1]);
+						scum = JSON.parse(matches[1])
 						if (scum.length == 0) {
 							if (typeof callback == 'function') fail()
 							return
@@ -79,7 +83,7 @@ module.exports = function(fs, rq) {
 				waterfall(newScumFilterEntries.map(
 					function(entry) {
 						return function(last, nextCallback) {
-							if (typeof last == 'function') nextCallback = last;
+							if (typeof last == 'function') nextCallback = last
 							parp(entry + ' added to Scum Filter.')
 							nextCallback()
 						}
@@ -94,7 +98,7 @@ module.exports = function(fs, rq) {
 				waterfall(removedScumFilterEntries.map(
 					function(entry) {
 						return function(last, nextCallback) {
-							if (typeof last == 'function') nextCallback = last;
+							if (typeof last == 'function') nextCallback = last
 							parp(entry + ' removed from Scum Filter.')
 							nextCallback()
 						}
@@ -127,13 +131,54 @@ module.exports = function(fs, rq) {
 	function parp(message) {
 	}
 
+	function email() {
+
+	}
+
+	// PRIVATE METHODS
+	function previousErrorLogged(callback) {
+		fs.readFile('error.js', 'utf8', callback)
+	} 
+
+	function webError(e, callback) {
+		previousErrorLogged(function(fsError, data) {
+			if (fsError) {
+				if (fsError.code == 'ENOENT') {
+					fs.writeFile('error.js', JSON.stringify(e), function() {
+						email()
+						if (typeof callback == 'function') return callback(e)
+					})
+				}
+				else {
+
+				}
+			}
+			else {
+				if (typeof callback == 'function') return callback(e)
+			}
+		})
+	}
+
+	// UNIT TEST METHODS (ugh)
 	function overrideParp(fn) {
 		parp = fn
 	}
 
-	return {
+	function overrideEmail(fn) {
+		email  = fn
+	}
+
+	// RETURN INTERFACE
+	var expose =  {
 		observe: observe,
 		parp: parp,
-		overrideParp: overrideParp
+		email: email
 	}
+
+	if (testMethods) {
+		expose.overrideParp = overrideParp
+		expose.overrideEmail = overrideEmail
+	}
+
+	return expose
 }

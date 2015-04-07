@@ -44,6 +44,11 @@ describe('trombone', function() {
 			'Then the current scum filter list is read from the file system', function(done) {
 			var mockFs = {
 				readFile: function(filename, encoding, callback) {
+					if (filename == 'error.js') {
+						var e = new Error
+						e.code = 'ENOENT'
+						return callback(e)
+					}
 					filename.should.equal('scumfilter.js')
 					encoding.should.equal('utf8')
 					callback(null, '[]')
@@ -395,12 +400,30 @@ describe('trombone', function() {
 			'And an error has previously been recorded ' +
 			'When the wroth index page is requested from the web ' + 
 			'Then no error is recorded', function(done) {
-			var error = new Error
+			var error = new Error('test error message')
+			var previousError = new Error('previous error')
+			var errorRecorded = false
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
+			var mockFs = {
+				readFile: function(filename, encoding, callback) {
+					if (filename == 'error.js') {
+						callback(null, JSON.stringify(previousError))
+					}
+					else {
+						callback(null, '[]')
+					}
+				},
+				writeFile: function(filename, data, callback) {
+					errorRecorded = true
+					callback()
+				}
+			}
 			var trombone = new tromboneModule(mockFs, mockRequest, true)
 			trombone.observe(function(e) {
+				errorRecorded.should.be.false;
+				done()
 			})
 		})
 

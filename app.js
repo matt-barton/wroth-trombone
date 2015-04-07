@@ -2,11 +2,14 @@
 
 var fs = require('fs')
 var rq = require('request')
+var parp = require('./parp')
 
-var tromboneModule = require('./trombone.js')
-var trombone = new tromboneModule(fs, rq)
+var emailModule = require('./email')
+var email = new emailModule()
 
-trombone.observe(function(e){
+var observeModule = require('./observe.js')
+var observe = new observeModule(fs, rq, parp, email)
+
+observe.go(function(e){
 	console.error(e)
 })
-

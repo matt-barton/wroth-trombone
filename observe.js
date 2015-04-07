@@ -2,7 +2,7 @@
 
 var waterfall = require('async-waterfall')
 
-module.exports = function(fs, rq, testMethods) {
+module.exports = function(fs, rq, parp, email) {
 
 	// PUBLIC METHODS
 	function observe(callback) {
@@ -31,7 +31,7 @@ module.exports = function(fs, rq, testMethods) {
 				rq('http://www.wrathofthebarclay.co.uk/interactive/board/board.php', function(e, html) {
 					if (e) return webError(e, callback)
 					previousErrorLogged(function(e, data) {
-						if (!e) email('Wroth service is resumed')	
+						if (!e) email.resumption()	
 					})
 					function fail() {
 						callback(new Error('No scum filter entries could be found.'))
@@ -128,13 +128,6 @@ module.exports = function(fs, rq, testMethods) {
 
 	}
 
-	function parp(message) {
-	}
-
-	function email() {
-
-	}
-
 	// PRIVATE METHODS
 	function previousErrorLogged(callback) {
 		fs.readFile('error.js', 'utf8', callback)
@@ -145,8 +138,9 @@ module.exports = function(fs, rq, testMethods) {
 			if (fsError) {
 				if (fsError.code == 'ENOENT') {
 					fs.writeFile('error.js', JSON.stringify(e), function() {
-						email()
-						if (typeof callback == 'function') return callback(e)
+						email.error(function() {
+							if (typeof callback == 'function') return callback(e)
+						})
 					})
 				}
 				else {
@@ -159,26 +153,8 @@ module.exports = function(fs, rq, testMethods) {
 		})
 	}
 
-	// UNIT TEST METHODS (ugh)
-	function overrideParp(fn) {
-		parp = fn
-	}
-
-	function overrideEmail(fn) {
-		email  = fn
-	}
-
 	// RETURN INTERFACE
-	var expose =  {
-		observe: observe,
-		parp: parp,
-		email: email
+	return  {
+		go: observe
 	}
-
-	if (testMethods) {
-		expose.overrideParp = overrideParp
-		expose.overrideEmail = overrideEmail
-	}
-
-	return expose
 }

@@ -1,7 +1,7 @@
 "use strict"
 
 var should = require('should')
-var tromboneModule = require('../trombone.js')
+var observeModule = require('../observe.js')
 
 describe('trombone', function() {
 
@@ -15,14 +15,27 @@ describe('trombone', function() {
 		callback(null, {body: ''})
 	}
 
+	var mockParp = function(message, callback) {
+		if (typeof callback == 'function') callback(null)
+	}
+
+	var mockEmail = {
+		error: function (callback) {
+			if (typeof callback == 'function') callback(null)
+		},
+		resumption: function (callback) {
+			if (typeof callback == 'function') callback(null)
+		}
+	}
+
 	describe('observe', function() {
 
 		// When trombone is observing
 		// Then trombone is asked to observe.
 		it ('When trombone is observing ' + 
 			'Then trombone is asked to observe.', function(done){
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe()
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go()
 			done()
 		})
 
@@ -32,8 +45,8 @@ describe('trombone', function() {
 		it ('Given observing is complete ' + 
 			'When trombone is observing ' + 
 			'Then the provided callback is called.', function(done){
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -54,8 +67,8 @@ describe('trombone', function() {
 					callback(null, '[]')
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -72,8 +85,8 @@ describe('trombone', function() {
 					callback(error)
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				e.should.equal(error)
 				done()
 			})
@@ -95,8 +108,8 @@ describe('trombone', function() {
 				(true).should.equal(false)
 				callback(null, {body: ''})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -125,9 +138,8 @@ describe('trombone', function() {
 					body: 'var scum = \'["test"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideParp(function() {})
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				(e === null).should.equal(true)
 				done()
 			})
@@ -150,12 +162,12 @@ describe('trombone', function() {
 
 				writeFile: function(filename, data, callback) {
 					filename.should.equal('scumfilter.js')
-					data.should.equal('[]');
-					callback();
+					data.should.equal('[]')
+					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				done()
 			})
 		})
@@ -182,8 +194,8 @@ describe('trombone', function() {
 					callback(errorTwo)
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				e.should.equal(errorTwo)
 				done()
 			})
@@ -215,8 +227,8 @@ describe('trombone', function() {
 				(true).should.equal(false)
 				callback()
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -229,8 +241,8 @@ describe('trombone', function() {
 				url.should.equal('http://www.wrathofthebarclay.co.uk/interactive/board/board.php')
 				callback(null, {body: ''})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})		
@@ -245,8 +257,8 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				e.should.equal(error)
 				done()
 			})
@@ -274,8 +286,8 @@ describe('trombone', function() {
 					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				errorChecked.should.be.true
 				done()
 			})
@@ -312,9 +324,9 @@ describe('trombone', function() {
 					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
-				errorRecorded.should.be.true;
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
+				errorRecorded.should.be.true
 				done()
 			})
 		})
@@ -347,11 +359,12 @@ describe('trombone', function() {
 					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideEmail(function() {
+			mockEmail.error = function (callback) {
 				emailRequested = true
-			})
-			trombone.observe(function(e) {
+				callback()
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				emailRequested.should.be.true
 				done()
 			})
@@ -381,13 +394,12 @@ describe('trombone', function() {
 					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideEmail(function(message) {
+			mockEmail.resumption = function() {
 				emailRequested = true
-				message.should.equal('Wroth service is resumed')
-			})
-			trombone.observe(function(e) {
-				emailRequested.should.be.true;
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
+				emailRequested.should.be.true
 				done()
 			})
 		})
@@ -420,9 +432,9 @@ describe('trombone', function() {
 					callback()
 				}
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
-				errorRecorded.should.be.false;
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
+				errorRecorded.should.be.false
 				done()
 			})
 		})
@@ -436,8 +448,8 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(null, {body: ''})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.observe(function(e) {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
 				e.should.be.type('object')
 				e.message.should.equal('No scum filter entries could be found.')
 				done()
@@ -467,11 +479,11 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.parp = function() {
+			var mockParp = function() {
 				(false).should.equal(true)
 			}
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -499,11 +511,11 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.parp = function() {
+			var mockParp = function() {
 				(false).should.equal(true)
 			}
-			trombone.observe(function() {
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				done()
 			})
 		})
@@ -516,8 +528,8 @@ describe('trombone', function() {
 			'And all but one matching entries are found on the file system ' +
 			'Then the trombone is asked to parp ' +
 			'And the scum filter on the filesystem is updated', function(done){
-			var writeFileCalled = false;
-			var parpCalled = false;
+			var writeFileCalled = false
+			var parpCalled = false
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]')
 			var mockFs = {
 				readFile: function(filename, encoding, callback) {
@@ -527,7 +539,7 @@ describe('trombone', function() {
 				writeFile: function(filename, data, callback) {
 					filename.should.equal('scumfilter.js')
 					data.should.equal(JSON.stringify(webScumfilter))
-					writeFileCalled = true;
+					writeFileCalled = true
 					callback()
 				}
 			}
@@ -536,14 +548,14 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideParp(function(message) {
+			mockParp = function(message) {
 				message.should.equal("ENTRY_THREE added to Scum Filter.")
-				parpCalled = true;
-			})
-			trombone.observe(function() {
-				parpCalled.should.equal(true);
-				writeFileCalled.should.equal(true);
+				parpCalled = true
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
+				parpCalled.should.equal(true)
+				writeFileCalled.should.equal(true)
 				done()
 			})
 		})
@@ -576,13 +588,13 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideParp(function() {
+			var mockParp = function() {
 				parpCalled ++
-			})
-			trombone.observe(function() {
-				parpCalled.should.equal(2);
-				writeFileCalled.should.equal(true);
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
+				parpCalled.should.equal(2)
+				writeFileCalled.should.equal(true)
 				done()
 			})
 		})
@@ -617,12 +629,12 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideParp(function(message) {
+			var mockParp = function(message) {
 				message.should.equal("ENTRY_THREE removed from Scum Filter.")
 				parpCalled = true
-			})
-			trombone.observe(function() {
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				parpCalled.should.be.true
 				writeFileCalled.should.be.true
 				done()
@@ -659,11 +671,11 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE","ENTRY_TWO"]\'.evalJSON'
 				})
 			}
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
-			trombone.overrideParp(function(message) {
+			var mockParp = function(message) {
 				parpCalled++
-			})
-			trombone.observe(function() {
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function() {
 				parpCalled.should.equal(2)
 				writeFileCalled.should.be.true
 				done()
@@ -672,10 +684,11 @@ describe('trombone', function() {
 
 	})
 
+/*
 	describe('parp', function() {
 		it ('When trombone needs to parp ' + 
 			'Then parp is invoked', function(done) {
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
+			var trombone = new tromboneModule(mockFs, mockRequest, mockParp)
 			trombone.parp()
 			done()
 		})
@@ -685,10 +698,11 @@ describe('trombone', function() {
 	describe('email', function() {
 		it ('When trombone needs to email ' + 
 			'Then email is invoked', function(done) {
-			var trombone = new tromboneModule(mockFs, mockRequest, true)
+			var trombone = new tromboneModule(mockFs, mockRequest, mockParp)
 			trombone.email()
 			done()
 		})
 	})
+*/
 
 })

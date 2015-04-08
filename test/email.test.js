@@ -15,7 +15,8 @@ describe('trombone', function() {
 			process.env.WROTH_TROMBONE_EMAIL_USERNAME = 'EMAIL_USERNAME'
 			process.env.WROTH_TROMBONE_EMAIL_PASSWORD = 'EMAIL_PASSWORD'
 			process.env.WROTH_TROMBONE_EMAIL_RECIPIENT = 'EMAIL_RECIPIENT'
-
+			process.env.WROTH_TROMBONE_EMAIL_FROM = 'EMAIL_FROM'
+			
 			mockSmtpTransport = function () {}
 			mockTransport = {
 				sendMail: function(options, callback) {
@@ -224,7 +225,7 @@ describe('trombone', function() {
 						sendMail: function (options, callback) {
 							emailSent = true
 							options.should.be.type('object')
-							options.from.should.equal('EMAIL_USERNAME')
+							options.from.should.equal('EMAIL_FROM')
 							options.to.should.equal('EMAIL_RECIPIENT')
 							options.subject.should.equal('Wroth Trombone: Error')
 							options.text.should.equal('This is the Wroth Trombone.  I encountered an error reading the Scum Filter from Wroth.')
@@ -251,7 +252,7 @@ describe('trombone', function() {
 						sendMail: function (options, callback) {
 							emailSent = true
 							options.should.be.type('object')
-							options.from.should.equal('EMAIL_USERNAME')
+							options.from.should.equal('EMAIL_FROM')
 							options.to.should.equal('EMAIL_RECIPIENT')
 							options.subject.should.equal('Wroth Trombone: Service Resumed')
 							options.text.should.equal('This is the Wroth Trombone.  Previous errors have cleared, and service has resumed.')

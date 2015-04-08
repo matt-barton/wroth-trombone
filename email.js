@@ -19,7 +19,7 @@ module.exports = function(nodemailer, smtpTransport) {
 	function error (callback) {
 		createTransport()
 		transport.sendMail({
-			from:    process.env.WROTH_TROMBONE_EMAIL_USERNAME,
+			from:    process.env.WROTH_TROMBONE_EMAIL_FROM,
 			to:      process.env.WROTH_TROMBONE_EMAIL_RECIPIENT,
 			subject: 'Wroth Trombone: Error',
 			text:    'This is the Wroth Trombone.  I encountered an error reading the Scum Filter from Wroth.'
@@ -31,7 +31,7 @@ module.exports = function(nodemailer, smtpTransport) {
 	function resumption(callback) {
 		createTransport()
 		transport.sendMail({
-			from:    process.env.WROTH_TROMBONE_EMAIL_USERNAME,
+			from:    process.env.WROTH_TROMBONE_EMAIL_FROM,
 			to:      process.env.WROTH_TROMBONE_EMAIL_RECIPIENT,
 			subject: 'Wroth Trombone: Service Resumed',
 			text:    'This is the Wroth Trombone.  Previous errors have cleared, and service has resumed.'

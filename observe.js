@@ -28,7 +28,7 @@ module.exports = function(fs, rq, parp, email) {
 			},
 
 			function(fsScumFilter, next) {
-				rq('http://www.wrathofthebarclay.co.uk/interactive/board/board.php', function(e, html) {
+				rq(process.env.WROTH_TROMBONE_WROTH_URL, function(e, html) {
 					if (e) return webError(e, callback)
 					previousErrorLogged(function(e, data) {
 						if (!e) {

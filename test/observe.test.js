@@ -39,6 +39,9 @@ describe('trombone', function() {
 				if (typeof callback == 'function') callback(null)
 			}
 		}
+
+		process.env.WROTH_TROMBONE_WROTH_URL = 'WROTH_URL'
+		
 		done()
 	})
 
@@ -236,7 +239,7 @@ describe('trombone', function() {
 		it ('When trombone is observing ' + 
 			'Then the wroth index page is requested from the web', function(done) {
 			var mockRequest = function(url, callback) {
-				url.should.equal('http://www.wrathofthebarclay.co.uk/interactive/board/board.php')
+				url.should.equal('WROTH_URL')
 				callback(null, {body: ''})
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)

@@ -31,7 +31,13 @@ module.exports = function(fs, rq, parp, email) {
 				rq('http://www.wrathofthebarclay.co.uk/interactive/board/board.php', function(e, html) {
 					if (e) return webError(e, callback)
 					previousErrorLogged(function(e, data) {
-						if (!e) email.resumption()	
+						if (!e) {
+							email.resumption(function() {
+								removePreviousError(function(e){
+									if (e) return callback(e)
+								})
+							})
+						}
 					})
 					function fail() {
 						callback(new Error('No scum filter entries could be found.'))
@@ -132,6 +138,10 @@ module.exports = function(fs, rq, parp, email) {
 	function previousErrorLogged(callback) {
 		fs.readFile('error.js', 'utf8', callback)
 	} 
+
+	function removePreviousError(callback) {
+		fs.unlink('error.js', callback)
+	}
 
 	function webError(e, callback) {
 		previousErrorLogged(function(fsError, data) {

@@ -5,28 +5,42 @@ var observeModule = require('../observe.js')
 
 describe('trombone', function() {
 
-	var mockFs = {
-		readFile: function(filename, encoding, callback) {
-			callback(null, '[]')
+	var mockFs,
+		mockRequest,
+		mockParp,
+		mockEmail
+
+	beforeEach(function(done) {
+		mockFs = {
+			readFile: function(filename, encoding, callback) {
+				callback(null, '[]')
+			},
+			writeFile: function(filename, data, callback) {
+				callback(null)
+			},
+			unlink: function(filename, callback) {
+				callback(null)
+			}
 		}
-	}
 
-	var mockRequest = function(url, callback) {
-		callback(null, {body: ''})
-	}
+		mockRequest = function(url, callback) {
+			callback(null, {body: ''})
+		}
 
-	var mockParp = function(message, callback) {
-		if (typeof callback == 'function') callback(null)
-	}
-
-	var mockEmail = {
-		error: function (callback) {
-			if (typeof callback == 'function') callback(null)
-		},
-		resumption: function (callback) {
+		mockParp = function(message, callback) {
 			if (typeof callback == 'function') callback(null)
 		}
-	}
+
+		mockEmail = {
+			error: function (callback) {
+				if (typeof callback == 'function') callback(null)
+			},
+			resumption: function (callback) {
+				if (typeof callback == 'function') callback(null)
+			}
+		}
+		done()
+	})
 
 	describe('observe', function() {
 
@@ -55,36 +69,34 @@ describe('trombone', function() {
 		// Then the current scum filter list is read from the file system
 		it ('When trombone is observing ' + 
 			'Then the current scum filter list is read from the file system', function(done) {
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'error.js') {
-						var e = new Error
-						e.code = 'ENOENT'
-						return callback(e)
-					}
-					filename.should.equal('scumfilter.js')
-					encoding.should.equal('utf8')
-					callback(null, '[]')
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'error.js') {
+					var e = new Error
+					e.code = 'ENOENT'
+					return callback(e)
 				}
+				filename.should.equal('scumfilter.js')
+				encoding.should.equal('utf8')
+				callback(null, '[]')
 			}
+			
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				done()
 			})
 		})
 
-		//Given an error occurs
+		// Given an error occurs
 		// When the current scum filter is read
 		// Then the error is passed to the callback
 		it ('Given an error occurs ' + 
 			'When the current scum filter is read ' +
 			'Then the error is passed to the callback', function(done){
 			var error = new Error()
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(error)
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(error)
 			}
+		
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				e.should.equal(error)
@@ -99,10 +111,8 @@ describe('trombone', function() {
 			'When the current scum filter is read ' +
 			'Then the wroth index page is not requested from the web', function(done){
 			var error = new Error()
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(error)
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(error)
 			}
 			var mockRequest = function(url, callback) {
 				(true).should.equal(false)
@@ -124,14 +134,11 @@ describe('trombone', function() {
 			'Then the error is not passed to the callback', function(done){
 			var error = new Error()
 			error.code = 'ENOENT'
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(error, '[]')
-				},
-
-				writeFile: function(filename, data, callback) {
-					callback(null)
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(error, '[]')
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback(null)
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -155,16 +162,13 @@ describe('trombone', function() {
 			'Then an empty scum filter is saved to the file system', function(done){
 			var error = new Error()
 			error.code = 'ENOENT'
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(error, '[]')
-				},
-
-				writeFile: function(filename, data, callback) {
-					filename.should.equal('scumfilter.js')
-					data.should.equal('[]')
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(error, '[]')
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				filename.should.equal('scumfilter.js')
+				data.should.equal('[]')
+				callback()
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
@@ -185,14 +189,11 @@ describe('trombone', function() {
 			var errorOne = new Error
 			errorOne.code = 'ENOENT'
 			var errorTwo = new Error
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(errorOne, '[]')
-				},
-
-				writeFile: function(filename, data, callback) {
-					callback(errorTwo)
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(errorOne, '[]')
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback(errorTwo)
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
@@ -214,14 +215,11 @@ describe('trombone', function() {
 			var errorOne = new Error
 			errorOne.code = 'ENOENT'
 			var errorTwo = new Error
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					callback(errorOne, '[]')
-				},
-
-				writeFile: function(filename, data, callback) {
-					callback(errorTwo)
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				callback(errorOne, '[]')
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback(errorTwo)
 			}
 			var mockRequest = function(url, callback) {
 				(true).should.equal(false)
@@ -253,7 +251,7 @@ describe('trombone', function() {
 		it ('Given an error occurs ' + 
 			'When the wroth index page is requested from the web ' + 
 			'Then the error is passed back to the caller', function(done) {
-			var error = new Error
+			var error = new Error('the error')
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
@@ -275,16 +273,14 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'scumfilter.js') return callback(null, '[]') 
-					errorChecked = true
-					filename.should.equal('error.js')
-					callback(null, '[]')
-				},
-				writeFile: function(filename, data, callback) {
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'scumfilter.js') return callback(null, '[]') 
+				errorChecked = true
+				filename.should.equal('error.js')
+				callback(null, '[]')
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback()
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
@@ -306,23 +302,21 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'error.js') {
-						var e = new Error
-						e.code = 'ENOENT'
-						callback(e)
-					}
-					else {
-						callback(null, '[]')
-					}
-				},
-				writeFile: function(filename, data, callback) {
-					errorRecorded = true
-					filename.should.equal('error.js')
-					data.should.equal(JSON.stringify(error))
-					callback()
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'error.js') {
+					var e = new Error
+					e.code = 'ENOENT'
+					callback(e)
 				}
+				else {
+					callback(null, '[]')
+				}
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				errorRecorded = true
+				filename.should.equal('error.js')
+				data.should.equal(JSON.stringify(error))
+				callback()
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
@@ -344,20 +338,18 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'error.js') {
-						var e = new Error
-						e.code = 'ENOENT'
-						callback(e)
-					}
-					else {
-						callback(null, '[]')
-					}
-				},
-				writeFile: function(filename, data, callback) {
-					callback()
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'error.js') {
+					var e = new Error
+					e.code = 'ENOENT'
+					callback(e)
 				}
+				else {
+					callback(null, '[]')
+				}
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback()
 			}
 			mockEmail.error = function (callback) {
 				emailRequested = true
@@ -385,14 +377,12 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
 				})
 			}
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'scumfilter.js') return callback(null, '[]') 
-					callback(null, JSON.stringify(error))
-				},
-				writeFile: function(filename, data, callback) {
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'scumfilter.js') return callback(null, '[]') 
+				callback(null, JSON.stringify(error))
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback()
 			}
 			mockEmail.resumption = function() {
 				emailRequested = true
@@ -400,6 +390,40 @@ describe('trombone', function() {
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				emailRequested.should.be.true
+				done()
+			})
+		})
+
+		// Given no error occurs
+		// And an error has previously been recorded
+		// When the wroth index page is requested from the web
+		// Then the previous error is deleted from the file system
+		it ('Given no error occurs ' +
+			'And an error has previously been recorded ' +
+			'When the wroth index page is requested from the web ' + 
+			'Then the previous error is deleted from the file system', function(done) {
+			var error = new Error('previous error')
+			var errorDeleted = false
+			var mockRequest = function(url, callback) {
+				callback(null, {
+					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
+				})
+			}
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'scumfilter.js') return callback(null, '[]') 
+				callback(null, JSON.stringify(error))
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				callback()
+			}
+			mockFs.unlink = function(filename, callback) {
+				errorDeleted = true
+				filename.should.equal('error.js')
+				callback()
+			}
+			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			observe.go(function(e) {
+				errorDeleted.should.be.true
 				done()
 			})
 		})
@@ -418,19 +442,17 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					if (filename == 'error.js') {
-						callback(null, JSON.stringify(previousError))
-					}
-					else {
-						callback(null, '[]')
-					}
-				},
-				writeFile: function(filename, data, callback) {
-					errorRecorded = true
-					callback()
+			mockFs.readFile = function(filename, encoding, callback) {
+				if (filename == 'error.js') {
+					callback(null, JSON.stringify(previousError))
 				}
+				else {
+					callback(null, '[]')
+				}
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				errorRecorded = true
+				callback()
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
@@ -464,15 +486,13 @@ describe('trombone', function() {
 			'And one matching entry is found on the file system ' +
 			'Then the trombone is not asked to parp ' +
 			'And the scum filter on the filesystem is not written to', function(done){
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					(false).should.equal(true)
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				(false).should.equal(true)
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -496,15 +516,13 @@ describe('trombone', function() {
 			'And matching entries are found on the file system ' +
 			'Then the trombone is not asked to parp ' +
 			'And the scum filter on the filesystem is not written to', function(done){
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO", "ENTRY_THREE"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					(false).should.equal(true)
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO", "ENTRY_THREE"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				(false).should.equal(true)
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -531,17 +549,15 @@ describe('trombone', function() {
 			var writeFileCalled = false
 			var parpCalled = false
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]')
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					filename.should.equal('scumfilter.js')
-					data.should.equal(JSON.stringify(webScumfilter))
-					writeFileCalled = true
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				filename.should.equal('scumfilter.js')
+				data.should.equal(JSON.stringify(webScumfilter))
+				writeFileCalled = true
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -566,22 +582,20 @@ describe('trombone', function() {
 		// And the scum filter on the filesystem is updated
 		it ('Given more than one scum filter entry is found on the wroth ' + 
 			'And many not matching entries are found on the file system ' +
-			'Then the trombone is asked to parp for each new entry' +
+			'Then the trombone is asked to parp for each new entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
 			var writeFileCalled = false
 			var parpCalled = 0
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]')
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					filename.should.equal('scumfilter.js')
-					data.should.equal(JSON.stringify(webScumfilter))
-					writeFileCalled = true
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				filename.should.equal('scumfilter.js')
+				data.should.equal(JSON.stringify(webScumfilter))
+				writeFileCalled = true
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -607,22 +621,20 @@ describe('trombone', function() {
 		it ('Given more than one scum filter entry is found on the wroth ' + 
 			'And all matching entries are found on the file system ' +
 			'And one extra entry is found on the file system ' +
-			'Then the trombone is asked to parp for the extra entry' +
+			'Then the trombone is asked to parp for the extra entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
 			var writeFileCalled = false
 			var parpCalled = false
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					filename.should.equal('scumfilter.js')
-					data.should.equal(JSON.stringify(webScumfilter))
-					writeFileCalled = true
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				filename.should.equal('scumfilter.js')
+				data.should.equal(JSON.stringify(webScumfilter))
+				writeFileCalled = true
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {
@@ -649,22 +661,20 @@ describe('trombone', function() {
 		it ('Given more than one scum filter entry is found on the wroth ' + 
 			'And all matching entries are found on the file system ' +
 			'And more than one extra entries are found on the file system ' +
-			'Then the trombone is asked to parp for each extra entry' +
+			'Then the trombone is asked to parp for each extra entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
 			var writeFileCalled = false
 			var parpCalled = 0
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
-			var mockFs = {
-				readFile: function(filename, encoding, callback) {
-					var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"])
-					callback(null, scumFilter)
-				},
-				writeFile: function(filename, data, callback) {
-					filename.should.equal('scumfilter.js')
-					data.should.equal(JSON.stringify(webScumfilter))
-					writeFileCalled = true
-					callback()
-				}
+			mockFs.readFile = function(filename, encoding, callback) {
+				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"])
+				callback(null, scumFilter)
+			}
+			mockFs.writeFile = function(filename, data, callback) {
+				filename.should.equal('scumfilter.js')
+				data.should.equal(JSON.stringify(webScumfilter))
+				writeFileCalled = true
+				callback()
 			}
 			var mockRequest = function(url, callback) {
 				callback(null, {

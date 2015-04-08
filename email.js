@@ -1,18 +1,19 @@
 "use strict"
 
-module.exports = function(nodemailer) {
+module.exports = function(nodemailer, smtpTransport) {
 
 	var transport = null
 
 	function createTransport() {
 		if (transport != null) return
-		transport = nodemailer.createTransport({
-			service: process.env.WROTH_TROMBONE_EMAIL_SERVICE,
+		transport = nodemailer.createTransport(smtpTransport({
+			host: process.env.WROTH_TROMBONE_EMAIL_SMTP_HOST,
+			port: process.env.WROTH_TROMBONE_EMAIL_SMTP_PORT,
 			auth: {
 				user: process.env.WROTH_TROMBONE_EMAIL_USERNAME,
-				pass: process.env.WROTH_TROMBONE_EMAIL_PASSWORD
+				pass:process.env.WROTH_TROMBONE_EMAIL_PASSWORD
 			}
-		})
+		}))
 	}
 
 	function error (callback) {

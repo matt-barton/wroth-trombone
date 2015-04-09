@@ -6,9 +6,6 @@ var rq = require('request')
 var twit = require('twit')
 var parp = require('./parp')(twit)
 
-parp('test #2')
-
-/*
 var nm = require('nodemailer')
 var smtpTransport = require('nodemailer-smtp-transport');
 var emailModule = require('./email')
@@ -27,7 +24,6 @@ function trombone () {
 	}, seconds * 1000)
 }
 trombone()
-*/
 
 
 

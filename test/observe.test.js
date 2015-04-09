@@ -568,7 +568,7 @@ describe('trombone', function() {
 				})
 			}
 			mockParp = function(message) {
-				message.should.equal("ENTRY_THREE added to Scum Filter.")
+				message.should.equal("'ENTRY_THREE' added to Scum Filter.")
 				parpCalled = true
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
@@ -645,7 +645,7 @@ describe('trombone', function() {
 				})
 			}
 			var mockParp = function(message) {
-				message.should.equal("ENTRY_THREE removed from Scum Filter.")
+				message.should.equal("'ENTRY_THREE' removed from Scum Filter.")
 				parpCalled = true
 			}
 			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)

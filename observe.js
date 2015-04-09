@@ -88,9 +88,10 @@ module.exports = function(fs, rq, parp, email) {
 			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
 				waterfall(newScumFilterEntries.map(
 					function(entry) {
+						console.log(entry)
 						return function(last, nextCallback) {
 							if (typeof last == 'function') nextCallback = last
-							parp(entry + ' added to Scum Filter.')
+							parp('\'' + entry + '\' added to Scum Filter.')
 							nextCallback()
 						}
 					}					
@@ -105,7 +106,7 @@ module.exports = function(fs, rq, parp, email) {
 					function(entry) {
 						return function(last, nextCallback) {
 							if (typeof last == 'function') nextCallback = last
-							parp(entry + ' removed from Scum Filter.')
+							parp('\'' + entry + '\' removed from Scum Filter.')
 							nextCallback()
 						}
 					}

@@ -98,7 +98,7 @@ describe('trombone', function() {
 				tweetPosted = true
 				what.should.equal('statuses/update')
 				messageObject.should.be.type('object')
-				messageObject.status.should.equal(message)
+				messageObject.status.should.equal('PARP! ' + message)
 				callback()
 			}
 			function mockTwit(details) {

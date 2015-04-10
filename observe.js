@@ -2,7 +2,7 @@
 
 var waterfall = require('async-waterfall')
 
-module.exports = function(fs, rq, parp, email) {
+module.exports = function(db, rq, parp, email) {
 
 	// PUBLIC METHODS
 	function observe(callback) {
@@ -10,30 +10,20 @@ module.exports = function(fs, rq, parp, email) {
 		waterfall([
 
 			function(next) {
-				fs.readFile('scumfilter.js', 'utf8', function(e, data) {
-					if (e) {
-						if (e.code == 'ENOENT') {
-							var file = JSON.stringify([])
-							return fs.writeFile('scumfilter.js', file, function(e) {
-								if (e) if (typeof callback == 'function') return callback(e)
-								return next(null, JSON.parse(file))
-							})
-						}
-						else {
-							if (typeof callback == 'function') return callback(e)
-						}
-					}
-					next(null, JSON.parse(data))
+				db.getScumFilter(function(e, data) {
+					if (e) if (typeof callback == 'function') return callback(e)
+					next(null, data)
 				})
 			},
 
-			function(fsScumFilter, next) {
+			function(dbScumFilter, next) {
 				rq(process.env.WROTH_TROMBONE_WROTH_URL, function(e, html) {
 					if (e) return webError(e, callback)
-					previousErrorLogged(function(e, data) {
-						if (!e) {
+					db.getPreviousError(function(e, data) {
+						if (e) return callback(e)
+						if (data.length > 0) {
 							email.resumption(function() {
-								removePreviousError(function(e){
+								db.removeError(function(e){
 									if (e) return callback(e)
 								})
 							})
@@ -57,30 +47,30 @@ module.exports = function(fs, rq, parp, email) {
 						if (typeof callback == 'function') return fail()
 					}
 
-					next(null, fsScumFilter, scum)
+					next(null, dbScumFilter, scum)
 				})
 			},
 
-			function(fsScumFilter, webScumFilter, next) {
+			function(dbScumFilter, webScumFilter, next) {
 
 				var newEntries = []
 				var removedEntries = []
 				for (var x=0; x<webScumFilter.length; x++) {
 					var webEntry = webScumFilter[x]
 					var found = false
-					for (var y=0; y<fsScumFilter.length; y++) {
-						if (fsScumFilter[y] == webEntry) found = true
+					for (var y=0; y<dbScumFilter.length; y++) {
+						if (dbScumFilter[y] == webEntry) found = true
 					}
 					if (!found) newEntries.push(webEntry)
 				}
 
-				for (var x=0; x<fsScumFilter.length; x++) {
-					var fsEntry = fsScumFilter[x]
+				for (var x=0; x<dbScumFilter.length; x++) {
+					var dbEntry = dbScumFilter[x]
 					var found = false
 					for (var y=0; y<webScumFilter.length; y++) {
-						if (webScumFilter[y] == fsEntry) found = true
+						if (webScumFilter[y] == dbEntry) found = true
 					}
-					if (!found) removedEntries.push(fsEntry)
+					if (!found) removedEntries.push(dbEntry)
 				}
 				next(null, newEntries, removedEntries, webScumFilter)
 			},
@@ -102,6 +92,22 @@ module.exports = function(fs, rq, parp, email) {
 			},
 
 			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
+				waterfall(newScumFilterEntries.map(
+					function(entry) {
+						return function(last, nextCallback) {
+							if (typeof last == 'function') nextCallback = last
+							db.addScumFilterEntry(entry, function(){
+								nextCallback()
+							})
+						}
+					}					
+				),
+				function (e) {
+					next(null, newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries)
+				})
+			},
+
+			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
 				waterfall(removedScumFilterEntries.map(
 					function(entry) {
 						return function(last, nextCallback) {
@@ -112,21 +118,25 @@ module.exports = function(fs, rq, parp, email) {
 					}
 				),
 				function (e) {
-					var writeScumFilter = newScumFilterEntries.length > 0 || removedScumFilterEntries.length > 0
-					next(null, writeScumFilter ? allScumFilterEntries : false)
+					next(null, newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries)
 				})
 			},
 
-			function(allScumFilterEntries, next) {
-				if (allScumFilterEntries !== false) {
-					fs.writeFile('scumfilter.js', JSON.stringify(allScumFilterEntries), function() {
-						next()
-					})
-				}
-				else {
+			function(newScumFilterEntries, removedScumFilterEntries, allScumFilterEntries, next) {
+				waterfall(removedScumFilterEntries.map(
+					function(entry) {
+						return function(last, nextCallback) {
+							if (typeof last == 'function') nextCallback = last
+							db.removeScumFilterEntry(entry, function() {
+								nextCallback()
+							})
+						}
+					}
+				),
+				function (e) {
 					next()
-				}
-			}
+				})
+			},
 
 		], function(e) {
 			if (e) if (typeof callback == 'function') return callback(e)
@@ -136,27 +146,15 @@ module.exports = function(fs, rq, parp, email) {
 	}
 
 	// PRIVATE METHODS
-	function previousErrorLogged(callback) {
-		fs.readFile('error.js', 'utf8', callback)
-	} 
-
-	function removePreviousError(callback) {
-		fs.unlink('error.js', callback)
-	}
-
 	function webError(e, callback) {
-		previousErrorLogged(function(fsError, data) {
-			if (fsError) {
-				if (fsError.code == 'ENOENT') {
-					fs.writeFile('error.js', JSON.stringify(e), function() {
-						email.error(function() {
-							if (typeof callback == 'function') return callback(e)
-						})
+		db.getPreviousError(function(dbError, data) {
+			if (dbError) if (typeof callback == 'function') return callback(dbError)
+			if (data.length == 0) {
+				db.storeError(e, function() {
+					email.error(function() {
+						if (typeof callback == 'function') return callback(e)
 					})
-				}
-				else {
-
-				}
+				})
 			}
 			else {
 				if (typeof callback == 'function') return callback(e)

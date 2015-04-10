@@ -5,21 +5,30 @@ var observeModule = require('../observe.js')
 
 describe('trombone', function() {
 
-	var mockFs,
+	var mockDb,
 		mockRequest,
 		mockParp,
 		mockEmail
 
 	beforeEach(function(done) {
-		mockFs = {
-			readFile: function(filename, encoding, callback) {
-				callback(null, '[]')
+		mockDb = {
+			getScumFilter: function (callback) {
+				callback(null, [])
 			},
-			writeFile: function(filename, data, callback) {
-				callback(null)
+			getPreviousError: function (callback) {
+				callback(null, [])
 			},
-			unlink: function(filename, callback) {
-				callback(null)
+			addScumFilterEntry: function(entry, callback) {
+				callback()
+			},
+			removeScumFilterEntry: function(entry, callback) {
+				callback()
+			},
+			storeError: function(error, callback) {
+				callback()
+			},
+			removeError: function(callback) {
+				callback()
 			}
 		}
 
@@ -51,7 +60,7 @@ describe('trombone', function() {
 		// Then trombone is asked to observe.
 		it ('When trombone is observing ' + 
 			'Then trombone is asked to observe.', function(done){
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go()
 			done()
 		})
@@ -62,29 +71,25 @@ describe('trombone', function() {
 		it ('Given observing is complete ' + 
 			'When trombone is observing ' + 
 			'Then the provided callback is called.', function(done){
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				done()
 			})
 		})
 
 		// When trombone is observing
-		// Then the current scum filter list is read from the file system
+		// Then the current scum filter list is requested from the database
 		it ('When trombone is observing ' + 
 			'Then the current scum filter list is read from the file system', function(done) {
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'error.js') {
-					var e = new Error
-					e.code = 'ENOENT'
-					return callback(e)
-				}
-				filename.should.equal('scumfilter.js')
-				encoding.should.equal('utf8')
-				callback(null, '[]')
+			var dbScumFilterRequested = false
+			mockDb.getScumFilter = function(callback) {
+				dbScumFilterRequested = true
+				callback(null, [])
 			}
 			
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
+				dbScumFilterRequested.should.be.true
 				done()
 			})
 		})
@@ -96,11 +101,11 @@ describe('trombone', function() {
 			'When the current scum filter is read ' +
 			'Then the error is passed to the callback', function(done){
 			var error = new Error()
-			mockFs.readFile = function(filename, encoding, callback) {
+			mockDb.getScumFilter = function(callback) {
 				callback(error)
 			}
 		
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				e.should.equal(error)
 				done()
@@ -113,123 +118,18 @@ describe('trombone', function() {
 		it ('Given an error occurs ' + 
 			'When the current scum filter is read ' +
 			'Then the wroth index page is not requested from the web', function(done){
+			var wrothRequested = false
 			var error = new Error()
-			mockFs.readFile = function(filename, encoding, callback) {
+			mockDb.getScumFilter = function(callback) {
 				callback(error)
 			}
 			var mockRequest = function(url, callback) {
-				(true).should.equal(false)
+				wrothRequested = true
 				callback(null, {body: ''})
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
-				done()
-			})
-		})
-
-		// Given an error occurs
-		// And the error is ENOENT
-		// When the current scum filter is read
-		// Then the error is not passed to the callback
-		it ('Given an error occurs ' +
-			'And the error is ENOENT ' +
-			'When the current scum filter is read ' +
-			'Then the error is not passed to the callback', function(done){
-			var error = new Error()
-			error.code = 'ENOENT'
-			mockFs.readFile = function(filename, encoding, callback) {
-				callback(error, '[]')
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback(null)
-			}
-			var mockRequest = function(url, callback) {
-				callback(null, {
-					body: 'var scum = \'["test"]\'.evalJSON'
-				})
-			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
-			observe.go(function(e) {
-				(e === null).should.equal(true)
-				done()
-			})
-		})
-
-		// Given an error occurs
-		// And the error is ENOENT
-		// When the current scum filter is read
-		// Then an empty scum filter is saved to the file system
-		it ('Given an error occurs ' +
-			'And the error is ENOENT ' +
-			'When the current scum filter is read ' +
-			'Then an empty scum filter is saved to the file system', function(done){
-			var error = new Error()
-			error.code = 'ENOENT'
-			mockFs.readFile = function(filename, encoding, callback) {
-				callback(error, '[]')
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				filename.should.equal('scumfilter.js')
-				data.should.equal('[]')
-				callback()
-			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
-			observe.go(function(e) {
-				done()
-			})
-		})
-
-		// Given an error occurs
-		// And the error is ENOENT
-		// When the current scum filter is read
-		// And an error occurs when a blank scum filter is written
-		// Then the second error is passed to the callback
-		it ('Given an error occurs ' +
-			'And the error is ENOENT ' +
-			'When the current scum filter is read ' +
-			'And an error occurs when a blank scum filter is written ' +
-			'Then the second error is passed to the callback', function(done){
-			var errorOne = new Error
-			errorOne.code = 'ENOENT'
-			var errorTwo = new Error
-			mockFs.readFile = function(filename, encoding, callback) {
-				callback(errorOne, '[]')
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback(errorTwo)
-			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
-			observe.go(function(e) {
-				e.should.equal(errorTwo)
-				done()
-			})
-		})
-
-		// Given an error occurs
-		// And the error is ENOENT
-		// When the current scum filter is read
-		// And an error occurs when a blank scum filter is written
-		// Then the wroth index page is not requested from the web
-		it ('Given an error occurs ' +
-			'And the error is ENOENT ' +
-			'When the current scum filter is read ' +
-			'And an error occurs when a blank scum filter is written ' +
-			'Then the wroth index page is not requested from the web ', function(done){
-			var errorOne = new Error
-			errorOne.code = 'ENOENT'
-			var errorTwo = new Error
-			mockFs.readFile = function(filename, encoding, callback) {
-				callback(errorOne, '[]')
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback(errorTwo)
-			}
-			var mockRequest = function(url, callback) {
-				(true).should.equal(false)
-				callback()
-			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
-			observe.go(function() {
+				wrothRequested.should.be.false
 				done()
 			})
 		})
@@ -242,7 +142,7 @@ describe('trombone', function() {
 				url.should.equal('WROTH_URL')
 				callback(null, {body: ''})
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				done()
 			})
@@ -258,7 +158,7 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				e.should.equal(error)
 				done()
@@ -276,16 +176,11 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'scumfilter.js') return callback(null, '[]') 
+			mockDb.getPreviousError = function(callback) {
 				errorChecked = true
-				filename.should.equal('error.js')
-				callback(null, '[]')
+				callback(null, [])
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback()
-			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				errorChecked.should.be.true
 				done()
@@ -305,23 +200,15 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'error.js') {
-					var e = new Error
-					e.code = 'ENOENT'
-					callback(e)
-				}
-				else {
-					callback(null, '[]')
-				}
+			mockDb.getPreviousError = function(callback) {
+				callback(null, [])
 			}
-			mockFs.writeFile = function(filename, data, callback) {
+			mockDb.storeError = function(errorToStore, callback) {
 				errorRecorded = true
-				filename.should.equal('error.js')
-				data.should.equal(JSON.stringify(error))
+				errorToStore.should.equal(error)
 				callback()
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				errorRecorded.should.be.true
 				done()
@@ -341,24 +228,14 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'error.js') {
-					var e = new Error
-					e.code = 'ENOENT'
-					callback(e)
-				}
-				else {
-					callback(null, '[]')
-				}
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback()
+			mockDb.getPreviousError = function(callback) {
+				callback(null, [])
 			}
 			mockEmail.error = function (callback) {
 				emailRequested = true
 				callback()
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				emailRequested.should.be.true
 				done()
@@ -380,17 +257,13 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
 				})
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'scumfilter.js') return callback(null, '[]') 
+			mockDb.getPreviousError = function(callback) {
 				callback(null, JSON.stringify(error))
-			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback()
 			}
 			mockEmail.resumption = function() {
 				emailRequested = true
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				emailRequested.should.be.true
 				done()
@@ -412,19 +285,14 @@ describe('trombone', function() {
 					body: 'var scum = \'["ENTRY_ONE"]\'.evalJSON'
 				})
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'scumfilter.js') return callback(null, '[]') 
+			mockDb.getPreviousError = function(callback) {
 				callback(null, JSON.stringify(error))
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				callback()
-			}
-			mockFs.unlink = function(filename, callback) {
+			mockDb.removeError = function(callback) {
 				errorDeleted = true
-				filename.should.equal('error.js')
 				callback()
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				errorDeleted.should.be.true
 				done()
@@ -445,19 +313,14 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(error)
 			}
-			mockFs.readFile = function(filename, encoding, callback) {
-				if (filename == 'error.js') {
-					callback(null, JSON.stringify(previousError))
-				}
-				else {
-					callback(null, '[]')
-				}
+			mockDb.getPreviousError = function(callback) {
+				callback(null, JSON.stringify(previousError))
 			}
-			mockFs.writeFile = function(filename, data, callback) {
+			mockDb.storeError = function(errorToStore, callback) {
 				errorRecorded = true
 				callback()
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				errorRecorded.should.be.false
 				done()
@@ -473,7 +336,7 @@ describe('trombone', function() {
 			var mockRequest = function(url, callback) {
 				callback(null, {body: ''})
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function(e) {
 				e.should.be.type('object')
 				e.message.should.equal('No scum filter entries could be found.')
@@ -488,13 +351,14 @@ describe('trombone', function() {
 		it ('Given one scum filter entry is found on the wroth ' + 
 			'And one matching entry is found on the file system ' +
 			'Then the trombone is not asked to parp ' +
-			'And the scum filter on the filesystem is not written to', function(done){
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE"])
+			'And the scum filter is not added to', function(done){
+			var scumFilterAddedTo = false
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				(false).should.equal(true)
+			mockDb.addScumFilterEntry = function(entry, callback) {
+				scumFilterAddedTo = true
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -505,8 +369,9 @@ describe('trombone', function() {
 			var mockParp = function() {
 				(false).should.equal(true)
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
+				scumFilterAddedTo.should.be.false
 				done()
 			})
 		})
@@ -519,12 +384,13 @@ describe('trombone', function() {
 			'And matching entries are found on the file system ' +
 			'Then the trombone is not asked to parp ' +
 			'And the scum filter on the filesystem is not written to', function(done){
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO", "ENTRY_THREE"])
+			var scumFilterAddedTo = false
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE", "ENTRY_TWO", "ENTRY_THREE"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				(false).should.equal(true)
+			mockDb.addScumFilterEntry = function(entry, callback) {
+				scumFilterAddedTo = true
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -535,8 +401,9 @@ describe('trombone', function() {
 			var mockParp = function() {
 				(false).should.equal(true)
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
+				scumFilterAddedTo.should.be.false
 				done()
 			})
 		})
@@ -549,17 +416,16 @@ describe('trombone', function() {
 			'And all but one matching entries are found on the file system ' +
 			'Then the trombone is asked to parp ' +
 			'And the scum filter on the filesystem is updated', function(done){
-			var writeFileCalled = false
+			var scumFilterAddedTo = false
 			var parpCalled = false
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE"]')
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE", "ENTRY_TWO"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				filename.should.equal('scumfilter.js')
-				data.should.equal(JSON.stringify(webScumfilter))
-				writeFileCalled = true
+			mockDb.addScumFilterEntry = function(entry, callback) {
+				entry.should.equal('ENTRY_THREE')
+				scumFilterAddedTo = true
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -571,10 +437,10 @@ describe('trombone', function() {
 				message.should.equal("'ENTRY_THREE' added to Scum Filter.")
 				parpCalled = true
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
-				parpCalled.should.equal(true)
-				writeFileCalled.should.equal(true)
+				parpCalled.should.be.true
+				scumFilterAddedTo.should.be.true
 				done()
 			})
 		})
@@ -587,17 +453,15 @@ describe('trombone', function() {
 			'And many not matching entries are found on the file system ' +
 			'Then the trombone is asked to parp for each new entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
-			var writeFileCalled = false
+			var timesScumFilterUpdated = 0
 			var parpCalled = 0
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]')
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO"])
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE", "ENTRY_TWO"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				filename.should.equal('scumfilter.js')
-				data.should.equal(JSON.stringify(webScumfilter))
-				writeFileCalled = true
+			mockDb.addScumFilterEntry = function(entry, callback) {
+				timesScumFilterUpdated++
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -608,10 +472,10 @@ describe('trombone', function() {
 			var mockParp = function() {
 				parpCalled ++
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				parpCalled.should.equal(2)
-				writeFileCalled.should.equal(true)
+				timesScumFilterUpdated.should.equal(2)
 				done()
 			})
 		})
@@ -626,17 +490,16 @@ describe('trombone', function() {
 			'And one extra entry is found on the file system ' +
 			'Then the trombone is asked to parp for the extra entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
-			var writeFileCalled = false
+			var entryRemovedFromScumFilter = false
 			var parpCalled = false
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE"])
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				filename.should.equal('scumfilter.js')
-				data.should.equal(JSON.stringify(webScumfilter))
-				writeFileCalled = true
+			mockDb.removeScumFilterEntry = function(entry, callback) {
+				entry.should.equal('ENTRY_THREE')
+				entryRemovedFromScumFilter = true
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -648,10 +511,10 @@ describe('trombone', function() {
 				message.should.equal("'ENTRY_THREE' removed from Scum Filter.")
 				parpCalled = true
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				parpCalled.should.be.true
-				writeFileCalled.should.be.true
+				entryRemovedFromScumFilter.should.be.true
 				done()
 			})
 		})
@@ -666,17 +529,15 @@ describe('trombone', function() {
 			'And more than one extra entries are found on the file system ' +
 			'Then the trombone is asked to parp for each extra entry ' +
 			'And the scum filter on the filesystem is updated', function(done){
-			var writeFileCalled = false
+			var timesEntriesRemovedFromScumFilter = 0
 			var parpCalled = 0
 			var webScumfilter = JSON.parse('["ENTRY_ONE","ENTRY_TWO"]')
-			mockFs.readFile = function(filename, encoding, callback) {
-				var scumFilter = JSON.stringify(["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"])
+			mockDb.getScumFilter = function(callback) {
+				var scumFilter = ["ENTRY_ONE", "ENTRY_TWO","ENTRY_THREE","ENTRY_FOUR"]
 				callback(null, scumFilter)
 			}
-			mockFs.writeFile = function(filename, data, callback) {
-				filename.should.equal('scumfilter.js')
-				data.should.equal(JSON.stringify(webScumfilter))
-				writeFileCalled = true
+			mockDb.removeScumFilterEntry = function(entry, callback) {
+				timesEntriesRemovedFromScumFilter++
 				callback()
 			}
 			var mockRequest = function(url, callback) {
@@ -687,35 +548,12 @@ describe('trombone', function() {
 			var mockParp = function(message) {
 				parpCalled++
 			}
-			var observe = new observeModule(mockFs, mockRequest, mockParp, mockEmail)
+			var observe = new observeModule(mockDb, mockRequest, mockParp, mockEmail)
 			observe.go(function() {
 				parpCalled.should.equal(2)
-				writeFileCalled.should.be.true
+				timesEntriesRemovedFromScumFilter.should.equal(2)
 				done()
 			})
 		})
-
 	})
-
-/*
-	describe('parp', function() {
-		it ('When trombone needs to parp ' + 
-			'Then parp is invoked', function(done) {
-			var trombone = new tromboneModule(mockFs, mockRequest, mockParp)
-			trombone.parp()
-			done()
-		})
-	})
-
-
-	describe('email', function() {
-		it ('When trombone needs to email ' + 
-			'Then email is invoked', function(done) {
-			var trombone = new tromboneModule(mockFs, mockRequest, mockParp)
-			trombone.email()
-			done()
-		})
-	})
-*/
-
 })

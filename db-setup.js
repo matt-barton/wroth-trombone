@@ -2,6 +2,8 @@
 
 var pg = require('pg')
 
+console.log(process.env.WROTH_TROMBONE_WROTH_URL)
+
 var client = new pg.Client(process.env.WROTH_TROMBONE_WROTH_URL)
 client.connect(function(err) {
  	if(err) return console.error('could not connect to postgres', err)

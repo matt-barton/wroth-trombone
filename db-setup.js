@@ -2,9 +2,7 @@
 
 var pg = require('pg')
 
-console.log(process.env.WROTH_TROMBONE_WROTH_URL)
-
-var client = new pg.Client(process.env.WROTH_TROMBONE_WROTH_URL)
+var client = new pg.Client(process.env.WROTH_TROMBONE_DATABASE_URL)
 client.connect(function(err) {
  	if(err) return console.error('could not connect to postgres', err)
 	client.query ('CREATE TABLE IF NOT EXISTS error(error varchar(999999))', function(err, result) {

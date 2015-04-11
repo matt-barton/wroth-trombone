@@ -1,6 +1,5 @@
 "use strict"
 
-var fs = require('fs')
 var rq = require('request')
 
 var twit = require('twit')
@@ -11,19 +10,16 @@ var smtpTransport = require('nodemailer-smtp-transport');
 var emailModule = require('./email')
 var email = new emailModule(nm, smtpTransport)
 
+var pg = require('pg')
+var db = require('./postgres')(pg)
+
 var observeModule = require('./observe.js')
-var observe = new observeModule(fs, rq, parp, email)
+var observe = new observeModule(db, rq, parp, email)
 
-var seconds = process.env.WROTH_TROMBONE_OBSERVE_FREQUENCY
+observe.go(function(e) {
+	console.log(e)
+})
 
-function trombone () {
-	setTimeout(function() {
-		observe.go(function(e){
-			trombone()
-		})		
-	}, seconds * 1000)
-}
-trombone()
 
 
 

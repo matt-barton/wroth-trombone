@@ -13,6 +13,7 @@ module.exports = function (twitModule) {
   			access_token_secret: process.env.WROTH_TROMBONE_TWITTER_ACCESS_TOKEN_SECRET
 		})
 		message = 'PARP! ' + message
+		console.log(message)
 		twit.post('statuses/update', {status: message}, function() {
 			if (typeof callback == 'function') callback(null)
 		})

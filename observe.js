@@ -11,7 +11,6 @@ module.exports = function(db, rq, parp, email) {
 
 			function(next) {
 				db.getScumFilter(function(e, data) {
-					console.log(data)
 					if (e) if (typeof callback == 'function') return callback(e)
 					next(null, data)
 				})

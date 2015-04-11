@@ -36,7 +36,8 @@ describe('trombone', function() {
 				},
 				query: function(sql, callback) {
 					callback(null, {rows: []})
-				}
+				},
+				end: function() {}
 			}
 			done()
 		})
@@ -238,47 +239,381 @@ describe('trombone', function() {
 
 		// Given no previous error exists
 		// When the previous error is requested
-		// Then an empty array is passed to the callback
+		// Then null results are passed to the callback
+		it ('Given no previous error exists ' +
+			'When the previous error is requested ' +
+			'Then an empty array is passed to the callback', function(done){
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(null, {
+							rows: []
+						})
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.getPreviousError(function(e, result){
+				(result == null).should.be.true
+				done()
+			})
+		})
 
 		// Given a previous error exists
 		// When the previous error is requested
 		// Then the error is passed to the callback 
+		it ('Given a previous error exists ' +
+			'When the previous error is requested ' +
+			'Then the error is passed to the callback', function(done){
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(null, {
+							rows: [{ error: 'THE ERROR'}]
+						})
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.getPreviousError(function(e, result){
+				result.should.equal('THE ERROR')
+				done()
+			})
+		})
 
 		// Given an error occurs
 		// When the previous error is requested
 		// Then the error is passed to the callback
+		it ('Given an error occurs ' +
+			'When the previous error is requested ' +
+			'Then the error is passed to the callback', function(done){
+			var error = new Error('the error')
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(error)
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.getPreviousError(function(e, result){
+				e.should.equal(error)
+				done()
+			})
+		})
 
-		// Given an error occurs
+		// Given no client connection exists
 		// When adding an entry to the scum filter
-		// Then the error is passed to the callback
+		// Then a pg client connection is made
+		it ('Given no client connection exists ' +
+			'When adding an entry to the scum filter ' +
+			'Then a pg client connection is made', function(done){
+			var connectionMade = false
+			process.env.WROTH_TROMBONE_DATABASE_URL = 'POSTGRES_URL'
+			var mockPg = {
+				Client: function(connectionString) {
+					connectionString.should.equal('POSTGRES_URL')
+					mockClient.connect = function(callback) {
+						connectionMade = true
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.addScumFilterEntry(null, function(){
+				connectionMade.should.be.true
+				done()
+			})
+		})
 
 		// Given no error occurs
 		// When adding an entry to the scum filter
 		// Then the entry is added to the scum filter
+		it ('Given no error occurs ' +
+			'When adding an entry to the scum filter ' +
+			'Then the entry is added to the scum filter', function(done){
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						sqlIssuedToDbConnection = true
+						sql.should.equal('INSERT INTO scumfilter (username) VALUES ("USERNAME")')
+						callback(null, {rows: []})
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.addScumFilterEntry('USERNAME', function(){
+				sqlIssuedToDbConnection.should.be.true
+				done()
+			})
+		})
 
 		// Given an error occurs
-		// When removing an entry from the scum filter
+		// When adding an entry to the scum filter
 		// Then the error is passed to the callback
+		it ('Given an error occurs ' +
+			'When adding an entry to the scum filter ' +
+			'Then the error is passed to the callback', function(done){
+			var error = new Error ('the error')
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(error)
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.addScumFilterEntry('USERNAME', function(e){
+				e.should.equal(error)
+				done()
+			})
+		})
+
+		// Given no client connection exists
+		// When removing an entry from the scum filter
+		// Then a pg client connection is made
+		it ('Given no client connection exists ' +
+			'When removing an entry from the scum filter ' +
+			'Then a pg client connection is made', function(done){
+			var connectionMade = false
+			process.env.WROTH_TROMBONE_DATABASE_URL = 'POSTGRES_URL'
+			var mockPg = {
+				Client: function(connectionString) {
+					connectionString.should.equal('POSTGRES_URL')
+					mockClient.connect = function(callback) {
+						connectionMade = true
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeScumFilterEntry (null, function(){
+				connectionMade.should.be.true
+				done()
+			})
+		})
 
 		// Given no error occurs
 		// When removing an entry from the scum filter
 		// Then the entry is removed from the scum filter
+		it ('Given no error occurs ' +
+			'When removing an entry from the scum filter ' +
+			'Then the entry is removed from the scum filter', function(done){
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						sqlIssuedToDbConnection = true
+						sql.should.equal('DELETE FROM scumfilter WHERE username = "USERNAME"')
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeScumFilterEntry('USERNAME', function(){
+				sqlIssuedToDbConnection.should.be.true
+				done()
+			})
+		})
 
 		// Given an error occurs
-		// When an error is being stored
+		// When removing an entry from the scum filter
 		// Then the error is passed to the callback
+		it ('Given an error occurs ' +
+			'When removing an entry from the scum filter ' +
+			'Then the error is passed to the callback', function(done){
+			var error = new Error ('an error')
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(error)
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeScumFilterEntry('USERNAME', function(e){
+				e.should.equal(error)
+				done()
+			})
+		})
+
+		// Given no client connection exists
+		// When an error is being stored
+		// Then a pg client connection is made
+		it ('Given no client connection exists ' +
+			'When an error is being stored ' +
+			'Then a pg client connection is made', function(done){
+			var connectionMade = false
+			process.env.WROTH_TROMBONE_DATABASE_URL = 'POSTGRES_URL'
+			var mockPg = {
+				Client: function(connectionString) {
+					connectionString.should.equal('POSTGRES_URL')
+					mockClient.connect = function(callback) {
+						connectionMade = true
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.storeError (null, function(){
+				connectionMade.should.be.true
+				done()
+			})
+		})
 
 		// Given no error occurs
 		// When an error is being stored
 		// Then the error is stored in JSON format
+		it ('Given no error occurs ' +
+			'When an error is being stored ' +
+			'Then the error is stored in JSON format', function(done){
+			var errorToStore = new Error('this is the error to store')
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						sqlIssuedToDbConnection = true
+						sql.should.equal('INSERT INTO error (error) VALUES (\'' + JSON.stringify(errorToStore) + '\')')
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.storeError(errorToStore, function(){
+				sqlIssuedToDbConnection.should.be.true
+				done()
+			})
+		})
 
 		// Given an error occurs
-		// When an error is being removed
+		// When an error is being stored
 		// Then the error is passed to the callback
+		it ('Given an error occurs ' +
+			'When an error is being stored ' +
+			'Then the error is passed to the callback', function(done){
+			var error = new Error('this is the error')
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(error)
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.storeError(new Error, function(e){
+				e.should.equal(error)
+				done()
+			})
+		})
+
+		// Given no client connection exists
+		// When an error is being removed
+		// Then a pg client connection is made
+		it ('Given no client connection exists ' +
+			'When an error is being removed ' +
+			'Then a pg client connection is made', function(done){
+			var connectionMade = false
+			process.env.WROTH_TROMBONE_DATABASE_URL = 'POSTGRES_URL'
+			var mockPg = {
+				Client: function(connectionString) {
+					connectionString.should.equal('POSTGRES_URL')
+					mockClient.connect = function(callback) {
+						connectionMade = true
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeError (function(){
+				connectionMade.should.be.true
+				done()
+			})
+		})
 
 		// Given no error occurs
 		// When an error is being removed
 		// Then the error is removed
+		it ('Given no error occurs ' +
+			'When an error is being removed ' +
+			'Then the error is removed', function(done){
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						sqlIssuedToDbConnection = true
+						sql.should.equal('DELETE FROM error')
+						callback()
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeError(function(){
+				sqlIssuedToDbConnection.should.be.true
+				done()
+			})
+		})
 
+		// Given an error occurs
+		// When an error is being removed
+		// Then the error is passed to the callback
+		it ('Given an error occurs ' +
+			'When an error is being removed ' +
+			'Then the error is passed to the callback', function(done){
+			var error = new Error ('this is the error')
+			var sqlIssuedToDbConnection = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.query = function(sql, callback) {
+						callback(error)
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeError(function(e){
+				e.should.equal(error)
+				done()
+			})
+		})
+
+		// Given a client connection exists
+		// When the connection is closed
+		// Then the client connection is closed
+		it('Given a client connection exists ' +
+			'When the connection is closed ' +
+			'Then the client connection is closed', function (done) {
+			var connectionClosed = false
+			var mockPg = {
+				Client: function(connectionString) {
+					mockClient.end = function() {
+						connectionClosed = true
+					}
+					return mockClient
+				}
+			}
+			var pg = require('../postgres')(mockPg)
+			pg.removeError(function () {
+				pg.close(function(){
+					connectionClosed.should.be.true
+					done()
+				})
+			})
+		})
 	})
 })

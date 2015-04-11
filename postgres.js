@@ -7,7 +7,8 @@ module.exports = function(pg) {
 
 	function connect (callback) {
 		client = new pg.Client(process.env.WROTH_TROMBONE_DATABASE_URL)
-		client.connect(function () {
+		client.connect(function (e) {
+			if (e) return callback(e)
 			connected = true
 			callback()
 		})
@@ -24,7 +25,8 @@ module.exports = function(pg) {
 
 	return {
 		getScumFilter: function (callback) {
-			query(function () {
+			query(function (e) {
+				if (e) if (typeof callback == 'function') return callback(e)
 				client.query('SELECT username FROM scumfilter', function (e, results) {
 					if (e) if (typeof callback == 'function') return callback(e)
 					var usernames = []
@@ -48,7 +50,7 @@ module.exports = function(pg) {
 
 		addScumFilterEntry: function(username, callback) {
 			query(function() {
-				client.query('INSERT INTO scumfilter (username) VALUES ("' + username + '")', function(e) {
+				client.query('INSERT INTO scumfilter (username) VALUES (\'' + username + '\')', function(e) {
 					if (e) if (typeof callback == 'function') return callback(e)
 					callback()
 				})
@@ -57,7 +59,7 @@ module.exports = function(pg) {
 
 		removeScumFilterEntry: function(username, callback) {
 			query(function () {
-				client.query('DELETE FROM scumfilter WHERE username = "' + username + '"', function(e) {
+				client.query('DELETE FROM scumfilter WHERE username = \'' + username + '\'', function(e) {
 					if (e) if (typeof callback == 'function') return callback(e)
 					callback()
 				})
@@ -87,7 +89,7 @@ module.exports = function(pg) {
 				client.end()
 				connected = false
 			}
-			callback()
+			if (typeof callback == 'function') callback()
 		}
 	}
 }

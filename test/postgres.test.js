@@ -341,7 +341,7 @@ describe('trombone', function() {
 				Client: function(connectionString) {
 					mockClient.query = function(sql, callback) {
 						sqlIssuedToDbConnection = true
-						sql.should.equal('INSERT INTO scumfilter (username) VALUES ("USERNAME")')
+						sql.should.equal('INSERT INTO scumfilter (username) VALUES (\'USERNAME\')')
 						callback(null, {rows: []})
 					}
 					return mockClient
@@ -412,7 +412,7 @@ describe('trombone', function() {
 				Client: function(connectionString) {
 					mockClient.query = function(sql, callback) {
 						sqlIssuedToDbConnection = true
-						sql.should.equal('DELETE FROM scumfilter WHERE username = "USERNAME"')
+						sql.should.equal('DELETE FROM scumfilter WHERE username = \'USERNAME\'')
 						callback()
 					}
 					return mockClient

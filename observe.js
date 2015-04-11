@@ -11,6 +11,7 @@ module.exports = function(db, rq, parp, email) {
 
 			function(next) {
 				db.getScumFilter(function(e, data) {
+					console.log(data)
 					if (e) if (typeof callback == 'function') return callback(e)
 					next(null, data)
 				})
@@ -21,7 +22,7 @@ module.exports = function(db, rq, parp, email) {
 					if (e) return webError(e, callback)
 					db.getPreviousError(function(e, data) {
 						if (e) return callback(e)
-						if (data.length > 0) {
+						if (data != null) {
 							email.resumption(function() {
 								db.removeError(function(e){
 									if (e) return callback(e)
@@ -139,6 +140,7 @@ module.exports = function(db, rq, parp, email) {
 			},
 
 		], function(e) {
+			db.close()
 			if (e) if (typeof callback == 'function') return callback(e)
 			if (typeof callback == 'function') callback(null)
 		})
